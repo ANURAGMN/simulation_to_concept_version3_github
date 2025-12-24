@@ -2,6 +2,7 @@
 Configuration for Version 3 Teaching Agent
 ==========================================
 Handles LLM setup, environment variables, and constants.
+Supports both .env files and Streamlit secrets.
 """
 
 import os
@@ -12,21 +13,35 @@ from pathlib import Path
 ENV_PATH = Path(__file__).parent / ".env"
 load_dotenv(ENV_PATH)
 
+# Try to import Streamlit secrets (for Streamlit Cloud deployment)
+try:
+    import streamlit as st
+    _USE_STREAMLIT_SECRETS = True
+except ImportError:
+    _USE_STREAMLIT_SECRETS = False
+
+
+def get_config_value(key: str, default: str = None) -> str:
+    """Get configuration value from Streamlit secrets or environment variables."""
+    if _USE_STREAMLIT_SECRETS and hasattr(st, 'secrets') and key in st.secrets:
+        return st.secrets[key]
+    return os.getenv(key, default)
+
 # ═══════════════════════════════════════════════════════════════════════════
 # LLM CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemma-3-27b-it")
-TEMPERATURE = float(os.getenv("TEMPERATURE", "0.7"))
+GOOGLE_API_KEY = get_config_value("GOOGLE_API_KEY")
+GEMINI_MODEL = get_config_value("GEMINI_MODEL", "gemini-2.0-flash")
+TEMPERATURE = float(get_config_value("TEMPERATURE", "0.7"))
 
 # ═══════════════════════════════════════════════════════════════════════════
 # TEACHING AGENT CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════
 
 # Guardrails
-MAX_EXCHANGES = int(os.getenv("MAX_EXCHANGES", "6"))      # Absolute ceiling per concept
-SCAFFOLD_TRIGGER = int(os.getenv("SCAFFOLD_TRIGGER", "3"))  # Break down after this many tries
+MAX_EXCHANGES = int(get_config_value("MAX_EXCHANGES", "6"))      # Absolute ceiling per concept
+SCAFFOLD_TRIGGER = int(get_config_value("SCAFFOLD_TRIGGER", "3"))  # Break down after this many tries
 
 # Understanding Levels
 UNDERSTANDING_LEVELS = ["none", "partial", "mostly", "complete"]
